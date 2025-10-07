@@ -1,6 +1,6 @@
-## Edge Core Plugins Toggle
+## Edge Tools (edge-stension)
 
-A VS Code extension that adds an "Edge Plugins" activity bar with views to quickly browse and toggle Edge core currency/swap plugins and flip environment booleans.
+A VS Code extension that adds an "Edge Tools" activity bar with views to quickly browse and toggle various Edge development configurations
 
 - **Views**: `Currency Plugins`, `Swap Plugins`, `Environment`
 - **Quick actions**: enable/disable all, sort A→Z, favorites, filter
@@ -52,4 +52,12 @@ No configuration needed. The extension looks for `src/util/corePlugins.ts` and `
 
 ### Releases
 Download the latest `.vsix` from the GitHub Releases page and install it in VS Code.
+
+#### How to create a new release
+1. Update version in `package.json` (e.g., `0.0.3`).
+2. Commit and push to `main`.
+3. Create a tag and push (this triggers the workflow):
+   - `git tag v0.0.3 && git push origin v0.0.3`
+4. Wait for GitHub Actions to finish. The Release is created automatically with the `.vsix` attached.
+5. Share the release link: https://github.com/Jon-edge/edge-stension/releases
 
