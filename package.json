@@ -1,6 +1,6 @@
 {
-  "name": "edge-core-plugins-toggle",
-  "displayName": "Edge Core Plugins Toggle",
+  "name": "edge-stension",
+  "displayName": "Edge Tools",
   "publisher": "jon-edge",
   "version": "0.0.1",
   "engines": {
@@ -30,7 +30,7 @@
     "onCommand:edge.toggleFavorite",
     "onCommand:edge.sortCurrencyAZ",
     "onCommand:edge.sortSwapAZ",
-    "onView:edgePluginsView",
+    "onView:edgeToolsView",
     "onView:edgeCurrencyPluginsView",
     "onView:edgeSwapPluginsView",
     "onView:edgeEnvironmentView"
@@ -149,14 +149,14 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "edgePlugins",
-          "title": "Edge Plugins",
+          "id": "edgeTools",
+          "title": "Edge Tools",
           "icon": "resources/edge.svg"
         }
       ]
     },
     "views": {
-      "edgePlugins": [
+      "edgeTools": [
         {
           "id": "edgeCurrencyPluginsView",
           "name": "Currency Plugins"
@@ -191,16 +191,6 @@
         { "command": "edge.toggleFavorite", "when": "(view == edgeCurrencyPluginsView || view == edgeSwapPluginsView) && viewItem == pluginFav", "group": "inline@1", "icon": "$(star-full)" },
         { "command": "edge.toggleFavorite", "when": "(view == edgeCurrencyPluginsView || view == edgeSwapPluginsView) && viewItem == pluginUnfav", "group": "inline@1", "icon": "$(star)" }
       ]
-    },
-    "configuration": {
-      "title": "Edge Core Plugins",
-      "properties": {
-        "edge.corePlugins.relativePath": {
-          "type": "string",
-          "default": "src/util/corePlugins.ts",
-          "description": "Relative path to corePlugins.ts from the workspace root"
-        }
-      }
     }
   },
   "scripts": {
@@ -210,6 +200,7 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.95.0",
+    "@types/node": "^20.12.7",
     "typescript": "^5.4.0"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"

@@ -8,7 +8,7 @@ A VS Code extension that adds an "Edge Plugins" activity bar with views to quick
 
 ### Requirements
 - **VS Code**: >= 1.95.0
-- Open the Edge React GUI workspace so the extension can find `env.json` and your `corePlugins.ts` file.
+- Open an edge-react-gui containing workspace so the extension can find `env.json` and `src/util/corePlugins.ts`.
 
 ### Installation
 - **From GitHub Release (recommended)**
@@ -33,13 +33,7 @@ A VS Code extension that adds an "Edge Plugins" activity bar with views to quick
   - Flip environment booleans in `env.json`
 
 ### Configuration
-- **edge.corePlugins.relativePath**: Relative path (from workspace root) to your `corePlugins.ts` file.
-
-```json
-{
-  "edge.corePlugins.relativePath": "src/util/corePlugins.ts"
-}
-```
+No configuration needed. The extension looks for `src/util/corePlugins.ts` and `env.json` under the first matching workspace folder.
 
 ### Commands
 - `edge.toggleCorePlugin`

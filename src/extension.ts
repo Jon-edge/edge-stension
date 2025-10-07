@@ -1,6 +1,86 @@
 import * as vscode from 'vscode'
 
+// Baked-in relative path to corePlugins.ts within edge-react-gui
+const CORE_PLUGINS_RELATIVE_PATH = 'src/util/corePlugins.ts'
+
+let debugChannel: vscode.OutputChannel | undefined
+function logDebug(message: string): void {
+  const ts = new Date().toISOString()
+  const line = `[${ts}] ${message}`
+  if (debugChannel != null) debugChannel.appendLine(line)
+  // Mirror to Extension Host log so you can always see it
+  // (This shows up under Output → "Extension Host")
+  // eslint-disable-next-line no-console
+  console.log(`[Edge Tools] ${line}`)
+}
+
+// Multi-root helpers
+function folderLooksLikeEdgeGui(folder: vscode.WorkspaceFolder): boolean {
+  const name = folder.name.toLowerCase()
+  const path = folder.uri.fsPath.toLowerCase()
+  return name.includes('edge-react-gui') || path.includes('edge-react-gui')
+}
+
+async function fileExists(uri: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function readJsonFile<T = unknown>(uri: vscode.Uri): Promise<T | undefined> {
+  try {
+    const doc = await vscode.workspace.openTextDocument(uri)
+    return JSON.parse(doc.getText()) as T
+  } catch {
+    return undefined
+  }
+}
+
+async function selectEdgeGuiFolder(): Promise<vscode.WorkspaceFolder | undefined> {
+  const folders = vscode.workspace.workspaceFolders ?? []
+  if (folders.length === 0) return undefined
+  const candidates: vscode.WorkspaceFolder[] = []
+  logDebug(`Workspace folders: ${folders.map(f => `${f.name} -> ${f.uri.fsPath}`).join(' | ')}`)
+  for (const folder of folders) {
+    const pkg = await readJsonFile<{ name?: string }>(vscode.Uri.joinPath(folder.uri, 'package.json'))
+    const pkgName = pkg?.name ?? '(none)'
+    const hasCore = await fileExists(vscode.Uri.joinPath(folder.uri, CORE_PLUGINS_RELATIVE_PATH))
+    const hasEnv = await fileExists(vscode.Uri.joinPath(folder.uri, 'env.json'))
+    logDebug(`Check folder '${folder.name}': pkg.name='${pkgName}', core=${hasCore}, env=${hasEnv}`)
+    if (hasCore && hasEnv) candidates.push(folder)
+  }
+  if (candidates.length === 1) return candidates[0]
+  if (candidates.length > 1) {
+    vscode.window.showErrorMessage('Multiple edge-react-gui folders detected (contain both corePlugins.ts and env.json). Please keep only one open.')
+    logDebug(`Error: multiple candidates: ${candidates.map(c => c.uri.fsPath).join(' | ')}`)
+    return undefined
+  }
+  vscode.window.showErrorMessage('Could not locate edge-react-gui. Ensure one workspace folder contains src/util/corePlugins.ts and env.json.')
+  logDebug('Error: no candidates found for edge-react-gui')
+  return undefined
+}
+
+async function findDocInEdgeGui(relativePath: string): Promise<vscode.TextDocument | undefined> {
+  const folder = await selectEdgeGuiFolder()
+  if (folder == null) return undefined
+  const uri = vscode.Uri.joinPath(folder.uri, relativePath)
+  try {
+    logDebug(`Opening document: ${uri.fsPath}`)
+    return await vscode.workspace.openTextDocument(uri)
+  } catch {
+    logDebug(`Open failed (not found): ${uri.fsPath}`)
+    return undefined
+  }
+}
+
 export function activate(context: vscode.ExtensionContext) {
+  debugChannel = vscode.window.createOutputChannel('Edge Tools')
+  // Surface the channel at least once so it's easy to find
+  debugChannel.show(true)
+  logDebug('Extension activated')
   const currencyProvider = new PluginTreeProvider('currency')
   const swapProvider = new PluginTreeProvider('swap')
   const environmentProvider = new EnvironmentTreeProvider()
@@ -284,12 +364,12 @@ class PluginTreeProvider implements vscode.TreeDataProvider<PluginItem> {
   }
 
   private readEntriesSync(): PluginLine[] {
-    const workspaceFolder = vscode.workspace.workspaceFolders != null ? vscode.workspace.workspaceFolders[0] : undefined
-    if (workspaceFolder == null) return []
-    const relativePath = vscode.workspace.getConfiguration('edge.corePlugins').get<string>('relativePath') ?? 'src/util/corePlugins.ts'
-    const fileUri = vscode.Uri.joinPath(workspaceFolder.uri, relativePath)
-    const openDoc = vscode.workspace.textDocuments.find(d => d.uri.toString() === fileUri.toString())
-    if (openDoc != null) return extractPluginLines(openDoc.getText())
+    const folders = vscode.workspace.workspaceFolders ?? []
+    for (const folder of folders) {
+      const fileUri = vscode.Uri.joinPath(folder.uri, CORE_PLUGINS_RELATIVE_PATH)
+      const openDoc = vscode.workspace.textDocuments.find(d => d.uri.toString() === fileUri.toString())
+      if (openDoc != null) return extractPluginLines(openDoc.getText())
+    }
     return []
   }
 
@@ -329,25 +409,24 @@ class EnvironmentTreeProvider implements vscode.TreeDataProvider<EnvItem> {
 }
 
 async function readPluginsOrShowError(): Promise<{ doc: vscode.TextDocument | undefined; entries: PluginLine[] }> {
-  const workspaceFolder = vscode.workspace.workspaceFolders != null ? vscode.workspace.workspaceFolders[0] : undefined
-  if (workspaceFolder == null) {
-    vscode.window.showErrorMessage('Open the edge-react-gui workspace first.')
+  if (vscode.workspace.workspaceFolders == null || vscode.workspace.workspaceFolders.length === 0) {
+    vscode.window.showErrorMessage('Open a workspace containing edge-react-gui (with corePlugins.ts).')
     return { doc: undefined, entries: [] }
   }
-  const relativePath = vscode.workspace.getConfiguration('edge.corePlugins').get<string>('relativePath') ?? 'src/util/corePlugins.ts'
-  const fileUri = vscode.Uri.joinPath(workspaceFolder.uri, relativePath)
-  let doc: vscode.TextDocument
-  try {
-    doc = await vscode.workspace.openTextDocument(fileUri)
-  } catch {
-    vscode.window.showErrorMessage(`File not found: ${relativePath}`)
+  const doc = await findDocInEdgeGui(CORE_PLUGINS_RELATIVE_PATH)
+  if (doc == null) {
+    vscode.window.showErrorMessage(`File not found in any workspace folder: ${CORE_PLUGINS_RELATIVE_PATH}`)
+    logDebug(`Error: corePlugins not found: ${CORE_PLUGINS_RELATIVE_PATH}`)
     return { doc: undefined, entries: [] }
   }
   const text = doc.getText()
   const entries = extractPluginLines(text)
   if (entries.length === 0) {
     vscode.window.showErrorMessage('No plugin entries found in currencyPlugins/swapPlugins.')
+    logDebug('Warning: No plugin entries found in parsed corePlugins.ts')
   }
+  await ensureEnvImportPresent(doc)
+  logDebug(`Parsed corePlugins.ts at ${doc.uri.fsPath}, entries=${entries.length}`)
   return { doc, entries }
 }
 
@@ -492,6 +571,27 @@ function findObjectBlock(text: string, constName: string): { start: number; end:
   return null
 }
 
+// Ensure `import { ENV } from '../env'` exists in corePlugins.ts
+async function ensureEnvImportPresent(doc: vscode.TextDocument): Promise<void> {
+  const text = doc.getText()
+  const hasImport = /\bimport\s*\{\s*ENV\s*\}\s*from\s*['"]\.\.\/env['"];?/.test(text)
+  if (hasImport) return
+  // Insert after the last top-level import; fallback to top of file
+  const importMatches = Array.from(text.matchAll(/^import\s.*$/gm))
+  let insertPos = 0
+  if (importMatches.length > 0) {
+    const last = importMatches[importMatches.length - 1]
+    insertPos = (last.index ?? 0) + last[0].length
+    // move past trailing newline if present
+    if (text[insertPos] === '\n') insertPos += 1
+  }
+  const edit = new vscode.WorkspaceEdit()
+  edit.insert(doc.uri, doc.positionAt(insertPos), "import { ENV } from '../env'\n")
+  await vscode.workspace.applyEdit(edit)
+  await doc.save()
+  logDebug(`Inserted missing ENV import into ${doc.uri.fsPath}`)
+}
+
 async function fixCommasForSection(section: Section): Promise<void> {
   const { doc, entries } = await readPluginsOrShowError()
   if (doc == null || entries.length === 0) return
@@ -528,32 +628,21 @@ function removeTrailingComma(line: string): string {
 type EnvJson = Record<string, unknown>
 
 async function readEnvBooleans(): Promise<Record<string, boolean>> {
-  const workspaceFolder = vscode.workspace.workspaceFolders != null ? vscode.workspace.workspaceFolders[0] : undefined
-  if (workspaceFolder == null) return {}
-  const envUri = vscode.Uri.joinPath(workspaceFolder.uri, 'env.json')
-  try {
-    const doc = await vscode.workspace.openTextDocument(envUri)
-    const json = JSON.parse(doc.getText()) as EnvJson
-    const out: Record<string, boolean> = {}
-    for (const [k, v] of Object.entries(json)) {
-      if (typeof v === 'boolean') out[k] = v
-    }
-    return out
-  } catch {
-    return {}
+  const doc = await findDocInEdgeGui('env.json')
+  if (doc == null) return {}
+  logDebug(`Reading env.json at ${doc.uri.fsPath}`)
+  const json = JSON.parse(doc.getText()) as EnvJson
+  const out: Record<string, boolean> = {}
+  for (const [k, v] of Object.entries(json)) {
+    if (typeof v === 'boolean') out[k] = v
   }
+  return out
 }
 
 async function toggleEnvBoolean(key: string): Promise<void> {
-  const workspaceFolder = vscode.workspace.workspaceFolders != null ? vscode.workspace.workspaceFolders[0] : undefined
-  if (workspaceFolder == null) return
-  const envUri = vscode.Uri.joinPath(workspaceFolder.uri, 'env.json')
-  let doc: vscode.TextDocument
-  try {
-    doc = await vscode.workspace.openTextDocument(envUri)
-  } catch {
-    return
-  }
+  const doc = await findDocInEdgeGui('env.json')
+  if (doc == null) return
+  const envUri = doc.uri
   const text = doc.getText()
   const regex = new RegExp(`(\\"${key}\\"\\s*:\\s*)(true|false)`, 'g')
   const newText = text.replace(regex, (_m, p1, p2) => `${p1}${p2 === 'true' ? 'false' : 'true'}`)
@@ -562,4 +651,5 @@ async function toggleEnvBoolean(key: string): Promise<void> {
   edit.replace(envUri, new vscode.Range(doc.positionAt(0), doc.positionAt(text.length)), newText)
   await vscode.workspace.applyEdit(edit)
   await doc.save()
+  logDebug(`Toggled env key '${key}' in ${envUri.fsPath}`)
 }

@@ -5,6 +5,7 @@
     "outDir": "out",
     "strict": true,
     "lib": ["ES2020"],
+    "types": ["node", "vscode"],
     "esModuleInterop": true,
     "skipLibCheck": true
   },
