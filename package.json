@@ -1,0 +1,216 @@
+{
+  "name": "edge-core-plugins-toggle",
+  "displayName": "Edge Core Plugins Toggle",
+  "publisher": "jon-edge",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:edge.toggleCorePlugin",
+    "onCommand:edge.togglePlugin",
+    "onCommand:edge.refreshPlugins",
+    "onCommand:edge.refreshCurrencyPlugins",
+    "onCommand:edge.refreshSwapPlugins",
+    "onCommand:edge.toggleAllCurrency",
+    "onCommand:edge.toggleAllSwap",
+    "onCommand:edge.enableAllCurrency",
+    "onCommand:edge.disableAllCurrency",
+    "onCommand:edge.enableAllSwap",
+    "onCommand:edge.disableAllSwap",
+    "onCommand:edge.filterCurrency",
+    "onCommand:edge.clearCurrencyFilter",
+    "onCommand:edge.filterSwap",
+    "onCommand:edge.clearSwapFilter",
+    "onCommand:edge.refreshEnvironment",
+    "onCommand:edge.env.toggleKey",
+    "onCommand:edge.toggleFavorite",
+    "onCommand:edge.sortCurrencyAZ",
+    "onCommand:edge.sortSwapAZ",
+    "onView:edgePluginsView",
+    "onView:edgeCurrencyPluginsView",
+    "onView:edgeSwapPluginsView",
+    "onView:edgeEnvironmentView"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "edge.toggleCorePlugin",
+        "title": "Toggle core/swaps plugin"
+      },
+      {
+        "command": "edge.togglePlugin",
+        "title": "Toggle plugin"
+      },
+      {
+        "command": "edge.toggleSection",
+        "title": "Toggle all"
+      },
+      {
+        "command": "edge.refreshPlugins",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "edge.refreshCurrencyPlugins",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "edge.refreshSwapPlugins",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "edge.toggleAllCurrency",
+        "title": "Toggle all",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "edge.toggleAllSwap",
+        "title": "Toggle all",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "edge.enableAllCurrency",
+        "title": "Enable all",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "edge.disableAllCurrency",
+        "title": "Disable all",
+        "icon": "$(circle-slash)"
+      },
+      {
+        "command": "edge.enableAllSwap",
+        "title": "Enable all",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "edge.disableAllSwap",
+        "title": "Disable all",
+        "icon": "$(circle-slash)"
+      },
+      {
+        "command": "edge.filterCurrency",
+        "title": "Filter",
+        "icon": "$(search)"
+      },
+      {
+        "command": "edge.clearCurrencyFilter",
+        "title": "Clear filter",
+        "icon": "$(close)"
+      },
+      {
+        "command": "edge.filterSwap",
+        "title": "Filter",
+        "icon": "$(search)"
+      },
+      {
+        "command": "edge.clearSwapFilter",
+        "title": "Clear filter",
+        "icon": "$(close)"
+      },
+      {
+        "command": "edge.refreshEnvironment",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "edge.env.toggleKey",
+        "title": "Toggle"
+      },
+      {
+        "command": "edge.toggleFavorite",
+        "title": "Toggle favorite",
+        "icon": "$(star)"
+      },
+      {
+        "command": "edge.sortCurrencyAZ",
+        "title": "Sort A→Z",
+        "icon": {
+          "light": "resources/sort-az.svg",
+          "dark": "resources/sort-az.svg"
+        }
+      },
+      {
+        "command": "edge.sortSwapAZ",
+        "title": "Sort A→Z",
+        "icon": {
+          "light": "resources/sort-az.svg",
+          "dark": "resources/sort-az.svg"
+        }
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "edgePlugins",
+          "title": "Edge Plugins",
+          "icon": "resources/edge.svg"
+        }
+      ]
+    },
+    "views": {
+      "edgePlugins": [
+        {
+          "id": "edgeCurrencyPluginsView",
+          "name": "Currency Plugins"
+        },
+        {
+          "id": "edgeSwapPluginsView",
+          "name": "Swap Plugins"
+        },
+        {
+          "id": "edgeEnvironmentView",
+          "name": "Environment"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        { "command": "edge.refreshCurrencyPlugins", "when": "view == edgeCurrencyPluginsView", "group": "navigation@1" },
+        { "command": "edge.filterCurrency", "when": "view == edgeCurrencyPluginsView && !edge.currencyFilterActive", "group": "navigation@1.5" },
+        { "command": "edge.clearCurrencyFilter", "when": "view == edgeCurrencyPluginsView && edge.currencyFilterActive", "group": "navigation@1.5" },
+        { "command": "edge.sortCurrencyAZ", "when": "view == edgeCurrencyPluginsView", "group": "navigation@1.6", "icon": "resources/sort-az.svg" },
+        { "command": "edge.enableAllCurrency", "when": "view == edgeCurrencyPluginsView && !edge.currencyAllEnabled", "group": "navigation@2" },
+        { "command": "edge.disableAllCurrency", "when": "view == edgeCurrencyPluginsView && edge.currencyAllEnabled", "group": "navigation@2" },
+        { "command": "edge.refreshSwapPlugins", "when": "view == edgeSwapPluginsView", "group": "navigation@1" },
+        { "command": "edge.filterSwap", "when": "view == edgeSwapPluginsView && !edge.swapFilterActive", "group": "navigation@1.5" },
+        { "command": "edge.clearSwapFilter", "when": "view == edgeSwapPluginsView && edge.swapFilterActive", "group": "navigation@1.5" },
+        { "command": "edge.sortSwapAZ", "when": "view == edgeSwapPluginsView", "group": "navigation@1.6", "icon": "resources/sort-az.svg" },
+        { "command": "edge.enableAllSwap", "when": "view == edgeSwapPluginsView && !edge.swapAllEnabled", "group": "navigation@2" },
+        { "command": "edge.disableAllSwap", "when": "view == edgeSwapPluginsView && edge.swapAllEnabled", "group": "navigation@2" },
+        { "command": "edge.refreshEnvironment", "when": "view == edgeEnvironmentView", "group": "navigation@1" }
+      ],
+      "view/item/context": [
+        { "command": "edge.toggleFavorite", "when": "(view == edgeCurrencyPluginsView || view == edgeSwapPluginsView) && viewItem == pluginFav", "group": "inline@1", "icon": "$(star-full)" },
+        { "command": "edge.toggleFavorite", "when": "(view == edgeCurrencyPluginsView || view == edgeSwapPluginsView) && viewItem == pluginUnfav", "group": "inline@1", "icon": "$(star)" }
+      ]
+    },
+    "configuration": {
+      "title": "Edge Core Plugins",
+      "properties": {
+        "edge.corePlugins.relativePath": {
+          "type": "string",
+          "default": "src/util/corePlugins.ts",
+          "description": "Relative path to corePlugins.ts from the workspace root"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "yarn compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.95.0",
+    "typescript": "^5.4.0"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}
