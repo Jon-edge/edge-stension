@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
@@ -29,10 +32,18 @@ jobs:
         run: |
           npx --yes @vscode/vsce package
 
+      - name: Locate VSIX
+        id: vsix
+        run: |
+          set -e
+          FILE=$(ls -1 *.vsix | head -n1)
+          echo "Found VSIX: $FILE"
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release and upload VSIX
         uses: softprops/action-gh-release@v2
         with:
-          files: "*.vsix"
+          files: ${{ steps.vsix.outputs.file }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
