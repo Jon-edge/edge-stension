@@ -30,7 +30,7 @@ jobs:
 
       - name: Package VSIX (vsce)
         run: |
-          npx --yes @vscode/vsce package
+          npx --yes @vscode/vsce package --allow-missing-repository
 
       - name: Locate VSIX
         id: vsix
@@ -39,6 +39,12 @@ jobs:
           FILE=$(ls -1 *.vsix | head -n1)
           echo "Found VSIX: $FILE"
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload VSIX as build artifact (debug)
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: ${{ steps.vsix.outputs.file }}
 
       - name: Create GitHub Release and upload VSIX
         uses: softprops/action-gh-release@v2
