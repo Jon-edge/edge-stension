@@ -12,7 +12,7 @@ A VS Code extension that adds an "Edge Tools" activity bar with views to quickly
 
 ### Installation
 - **From GitHub Release (recommended)**
-  1. Download the `.vsix` from the repository Releases page.
+  1. Download the `.vsix` from the repository [Releases page](https://github.com/Jon-edge/edge-stension/releases).
   2. In VS Code run: Extensions panel → `…` → `Install from VSIX…` → select the downloaded file.
 
 - **From source (development)**
