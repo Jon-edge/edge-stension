@@ -8,7 +8,6 @@ A VS Code extension that adds an "Edge Tools" activity bar with views to quickly
 
 ### Requirements
 - **VS Code**: >= 1.95.0
-- Open an edge-react-gui containing workspace so the extension can find `env.json` and `src/util/corePlugins.ts`.
 
 ### Installation
 - **From GitHub Release (recommended)**
@@ -23,8 +22,8 @@ A VS Code extension that adds an "Edge Tools" activity bar with views to quickly
   3. Press `F5` to launch the Extension Development Host
 
 ### Usage
-- Open your Edge React GUI project in VS Code (as the workspace root)
-- Open the `Edge Plugins` activity bar icon
+- Open an edge-react-gui containing workspace or worktree
+- Open the `Edge Tools` activity bar icon
 - Use the toolbar actions and item context menus to:
   - Toggle individual plugins
   - Enable/disable all in a section
