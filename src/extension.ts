@@ -84,6 +84,11 @@ export function activate(context: vscode.ExtensionContext) {
   const currencyProvider = new PluginTreeProvider('currency')
   const swapProvider = new PluginTreeProvider('swap')
   const environmentProvider = new EnvironmentTreeProvider()
+
+  // Load persisted favorites (workspace-scoped)
+  const persistedFavs = context.workspaceState.get<string[]>('edge.favorites', [])
+  currencyProvider.setFavorites(persistedFavs)
+  swapProvider.setFavorites(persistedFavs)
   context.subscriptions.push(
     vscode.window.createTreeView('edgeCurrencyPluginsView', {
       treeDataProvider: currencyProvider,
@@ -252,6 +257,14 @@ export function activate(context: vscode.ExtensionContext) {
       const favKey = `${item.entry.section}:${item.entry.key}`
       if (item.entry.section === 'currency') currencyProvider.toggleFavorite(favKey)
       else swapProvider.toggleFavorite(favKey)
+      // Persist combined favorites after toggle
+      const combinedFavs = Array.from(
+        new Set([
+          ...currencyProvider.getFavoriteKeys(),
+          ...swapProvider.getFavoriteKeys()
+        ])
+      )
+      void context.workspaceState.update('edge.favorites', combinedFavs)
     })
   )
   // Environment toggles
@@ -299,6 +312,15 @@ class PluginTreeProvider implements vscode.TreeDataProvider<PluginItem> {
 
   // Sorting defaults to A→Z
   toggleFavorite(key: string): void { this.favorites.has(key) ? this.favorites.delete(key) : this.favorites.add(key); this.refresh() }
+
+  setFavorites(keys: string[]): void {
+    this.favorites = new Set(keys)
+    this.refresh()
+  }
+
+  getFavoriteKeys(): string[] {
+    return Array.from(this.favorites)
+  }
 
   async getChildren(element?: PluginItem): Promise<PluginItem[]> {
     const { entries } = await readPluginsOrShowError()
