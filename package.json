@@ -10,30 +10,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:edge.toggleCorePlugin",
-    "onCommand:edge.togglePlugin",
-    "onCommand:edge.refreshPlugins",
-    "onCommand:edge.refreshCurrencyPlugins",
-    "onCommand:edge.refreshSwapPlugins",
-    "onCommand:edge.toggleAllCurrency",
-    "onCommand:edge.toggleAllSwap",
-    "onCommand:edge.enableAllCurrency",
-    "onCommand:edge.disableAllCurrency",
-    "onCommand:edge.enableAllSwap",
-    "onCommand:edge.disableAllSwap",
-    "onCommand:edge.filterCurrency",
-    "onCommand:edge.clearCurrencyFilter",
-    "onCommand:edge.filterSwap",
-    "onCommand:edge.clearSwapFilter",
-    "onCommand:edge.refreshEnvironment",
-    "onCommand:edge.env.toggleKey",
-    "onCommand:edge.toggleFavorite",
-    "onCommand:edge.sortCurrencyAZ",
-    "onCommand:edge.sortSwapAZ",
-    "onView:edgeToolsView",
-    "onView:edgeCurrencyPluginsView",
-    "onView:edgeSwapPluginsView",
-    "onView:edgeEnvironmentView"
+    "onView:edgeToolsView"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -128,22 +105,6 @@
         "command": "edge.toggleFavorite",
         "title": "Toggle favorite",
         "icon": "$(star)"
-      },
-      {
-        "command": "edge.sortCurrencyAZ",
-        "title": "Sort A→Z",
-        "icon": {
-          "light": "resources/sort-az.svg",
-          "dark": "resources/sort-az.svg"
-        }
-      },
-      {
-        "command": "edge.sortSwapAZ",
-        "title": "Sort A→Z",
-        "icon": {
-          "light": "resources/sort-az.svg",
-          "dark": "resources/sort-az.svg"
-        }
       }
     ],
     "viewsContainers": {
@@ -176,13 +137,11 @@
         { "command": "edge.refreshCurrencyPlugins", "when": "view == edgeCurrencyPluginsView", "group": "navigation@1" },
         { "command": "edge.filterCurrency", "when": "view == edgeCurrencyPluginsView && !edge.currencyFilterActive", "group": "navigation@1.5" },
         { "command": "edge.clearCurrencyFilter", "when": "view == edgeCurrencyPluginsView && edge.currencyFilterActive", "group": "navigation@1.5" },
-        { "command": "edge.sortCurrencyAZ", "when": "view == edgeCurrencyPluginsView", "group": "navigation@1.6", "icon": "resources/sort-az.svg" },
         { "command": "edge.enableAllCurrency", "when": "view == edgeCurrencyPluginsView && !edge.currencyAllEnabled", "group": "navigation@2" },
         { "command": "edge.disableAllCurrency", "when": "view == edgeCurrencyPluginsView && edge.currencyAllEnabled", "group": "navigation@2" },
         { "command": "edge.refreshSwapPlugins", "when": "view == edgeSwapPluginsView", "group": "navigation@1" },
         { "command": "edge.filterSwap", "when": "view == edgeSwapPluginsView && !edge.swapFilterActive", "group": "navigation@1.5" },
-        { "command": "edge.clearSwapFilter", "when": "view == edgeSwapPluginsView && edge.swapFilterActive", "group": "navigation@1.5" },
-        { "command": "edge.sortSwapAZ", "when": "view == edgeSwapPluginsView", "group": "navigation@1.6", "icon": "resources/sort-az.svg" },
+        { "command": "edge.clearSwapFilter", "when": "view == edgeSwapPluginsView && edge.swapFilterActive", "group": "navigation@1.5" },   
         { "command": "edge.enableAllSwap", "when": "view == edgeSwapPluginsView && !edge.swapAllEnabled", "group": "navigation@2" },
         { "command": "edge.disableAllSwap", "when": "view == edgeSwapPluginsView && edge.swapAllEnabled", "group": "navigation@2" },
         { "command": "edge.refreshEnvironment", "when": "view == edgeEnvironmentView", "group": "navigation@1" }

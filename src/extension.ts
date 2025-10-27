@@ -106,8 +106,8 @@ export function activate(context: vscode.ExtensionContext) {
   // QuickPick toggle (kept as a convenience)
   context.subscriptions.push(
     vscode.commands.registerCommand('edge.toggleCorePlugin', async () => {
-      const { doc, entries } = await readPluginsOrShowError()
-      if (doc == null || entries.length === 0) return
+      const { entries } = await readPluginsOrShowError()
+      if (entries.length === 0) return
 
       const pick = await vscode.window.showQuickPick(
         entries.map(e => ({
@@ -119,7 +119,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (pick == null) return
       const entry = entries.find(e => e.key === pick.label)
       if (entry == null) return
-      await togglePluginLine(entry)
+      await setPluginEnabled(entry, !entry.enabled)
       currencyProvider.refresh();
       swapProvider.refresh()
     })
@@ -172,7 +172,7 @@ export function activate(context: vscode.ExtensionContext) {
       const filtered = entries.filter(e => e.section === 'currency')
       if (filtered.length === 0) return
       const allEnabled = filtered.every(e => e.enabled)
-      await setSectionEnabledBatch('currency', !allEnabled)
+      await setSectionEnabled('currency', !allEnabled)
       currencyProvider.refresh();
       swapProvider.refresh()
       void updateContextKeys()
@@ -184,7 +184,7 @@ export function activate(context: vscode.ExtensionContext) {
       const filtered = entries.filter(e => e.section === 'swap')
       if (filtered.length === 0) return
       const allEnabled = filtered.every(e => e.enabled)
-      await setSectionEnabledBatch('swap', !allEnabled)
+      await setSectionEnabled('swap', !allEnabled)
       currencyProvider.refresh();
       swapProvider.refresh()
       void updateContextKeys()
@@ -192,25 +192,25 @@ export function activate(context: vscode.ExtensionContext) {
   )
   context.subscriptions.push(
     vscode.commands.registerCommand('edge.enableAllCurrency', async () => {
-      await setSectionEnabledBatch('currency', true)
+      await setSectionEnabled('currency', true)
       currencyProvider.refresh(); swapProvider.refresh(); void updateContextKeys()
     })
   )
   context.subscriptions.push(
     vscode.commands.registerCommand('edge.disableAllCurrency', async () => {
-      await setSectionEnabledBatch('currency', false)
+      await setSectionEnabled('currency', false)
       currencyProvider.refresh(); swapProvider.refresh(); void updateContextKeys()
     })
   )
   context.subscriptions.push(
     vscode.commands.registerCommand('edge.enableAllSwap', async () => {
-      await setSectionEnabledBatch('swap', true)
+      await setSectionEnabled('swap', true)
       currencyProvider.refresh(); swapProvider.refresh(); void updateContextKeys()
     })
   )
   context.subscriptions.push(
     vscode.commands.registerCommand('edge.disableAllSwap', async () => {
-      await setSectionEnabledBatch('swap', false)
+      await setSectionEnabled('swap', false)
       currencyProvider.refresh(); swapProvider.refresh(); void updateContextKeys()
     })
   )
@@ -245,13 +245,7 @@ export function activate(context: vscode.ExtensionContext) {
       await updateFilterContext()
     })
   )
-  // Sort and favorites
-  context.subscriptions.push(
-    vscode.commands.registerCommand('edge.sortCurrencyAZ', () => currencyProvider.toggleSort())
-  )
-  context.subscriptions.push(
-    vscode.commands.registerCommand('edge.sortSwapAZ', () => swapProvider.toggleSort())
-  )
+  // Favorites
   context.subscriptions.push(
     vscode.commands.registerCommand('edge.toggleFavorite', (item?: PluginItem) => {
       if (item == null || item.kind !== 'plugin') return
@@ -293,7 +287,7 @@ type PluginItem =
 class PluginTreeProvider implements vscode.TreeDataProvider<PluginItem> {
   private filterText: string | undefined
   private favorites = new Set<string>()
-  private sortAZ = false
+  private sortAZ = true
   constructor(private readonly onlySection?: Section) {}
   private readonly emitter = new vscode.EventEmitter<void>()
   readonly onDidChangeTreeData = this.emitter.event
@@ -303,7 +297,7 @@ class PluginTreeProvider implements vscode.TreeDataProvider<PluginItem> {
     this.refresh()
   }
 
-  toggleSort(): void { this.sortAZ = !this.sortAZ; this.refresh() }
+  // Sorting defaults to A→Z
   toggleFavorite(key: string): void { this.favorites.has(key) ? this.favorites.delete(key) : this.favorites.add(key); this.refresh() }
 
   async getChildren(element?: PluginItem): Promise<PluginItem[]> {
@@ -392,7 +386,7 @@ class EnvironmentTreeProvider implements vscode.TreeDataProvider<EnvItem> {
 
   async getChildren(): Promise<EnvItem[]> {
     const env = await readEnvBooleans()
-    return [
+    const keys = [
       'DEBUG_PLUGINS',
       'DEBUG_CORE',
       'DEBUG_CURRENCY_PLUGINS',
@@ -400,7 +394,8 @@ class EnvironmentTreeProvider implements vscode.TreeDataProvider<EnvItem> {
       'DEBUG_EXCHANGES',
       'DEBUG_LOGBOX',
       'USE_FAKE_CORE'
-    ].map(key => ({ key, value: env[key] === true }))
+    ].slice().sort((a, b) => a.localeCompare(b))
+    return keys.map(key => ({ key, value: env[key] === true }))
   }
 
   refresh(): void {
@@ -420,58 +415,69 @@ async function readPluginsOrShowError(): Promise<{ doc: vscode.TextDocument | un
     return { doc: undefined, entries: [] }
   }
   const text = doc.getText()
-  const entries = extractPluginLines(text)
+  let entries = extractPluginLines(text)
   if (entries.length === 0) {
     vscode.window.showErrorMessage('No plugin entries found in currencyPlugins/swapPlugins.')
     logDebug('Warning: No plugin entries found in parsed corePlugins.ts')
   }
-  await ensureEnvImportPresent(doc)
+  // Overlay enabled state from env filter lists, not from commented lines:
+  const filters = await readEnvFilters()
+  entries = applyFiltersToEntries(entries, filters)
   logDebug(`Parsed corePlugins.ts at ${doc.uri.fsPath}, entries=${entries.length}`)
   return { doc, entries }
 }
 
-async function togglePluginLine(target: PluginLine): Promise<void> {
-  const { doc, entries } = await readPluginsOrShowError()
-  if (doc == null || entries.length === 0) return
-  // Re-find the entry by key+section in case offsets shifted
-  const entry = entries.find(e => e.key === target.key && e.section === target.section)
-  if (entry == null) return
-  const edit = new vscode.WorkspaceEdit()
-  const range = new vscode.Range(doc.positionAt(entry.lineStart), doc.positionAt(entry.lineEnd))
-  const originalLine = doc.getText(range)
-  const updatedLine = toggleComment(originalLine)
-  edit.replace(doc.uri, range, updatedLine)
-  await vscode.workspace.applyEdit(edit)
-  await doc.save()
-  await fixCommasForSection(entry.section)
-}
-
+// Env-based toggling
 async function setPluginEnabled(target: PluginLine, enable: boolean): Promise<void> {
-  const { doc, entries } = await readPluginsOrShowError()
-  if (doc == null || entries.length === 0) return
-  const entry = entries.find(e => e.key === target.key && e.section === target.section)
-  if (entry == null) return
-  if (entry.enabled === enable) return
-  const range = new vscode.Range(doc.positionAt(entry.lineStart), doc.positionAt(entry.lineEnd))
-  const originalLine = doc.getText(range)
-  const updatedLine = toggleComment(originalLine)
-  const edit = new vscode.WorkspaceEdit()
-  edit.replace(doc.uri, range, updatedLine)
-  await vscode.workspace.applyEdit(edit)
-  await doc.save()
-  await fixCommasForSection(entry.section)
+  const { entries } = await readPluginsOrShowError()
+  if (entries.length === 0) return
+  const sectionEntries = entries.filter(e => e.section === target.section)
+  const keys = sectionEntries.map(e => e.key)
+  const filters = await readEnvFilters()
+  const { currency, swap } = filters
+  const arr = target.section === 'currency' ? currency.slice() : swap.slice()
+  const isNoFilter = arr.length === 0
+  const alreadyEnabled = isNoFilter || arr.includes(target.key)
+  if (enable) {
+    if (alreadyEnabled) return
+    arr.push(target.key)
+    // If all keys are included, compress to [] (no filtering)
+    if (arr.length >= keys.length && keys.every(k => arr.includes(k))) arr.length = 0
+  } else {
+    if (!alreadyEnabled && arr.length > 0) return
+    if (isNoFilter) {
+      // Start from all enabled, remove the target
+      for (const k of keys) if (k !== target.key) arr.push(k)
+    } else {
+      const idx = arr.indexOf(target.key)
+      if (idx >= 0) arr.splice(idx, 1)
+    }
+    // If removing results in including none, use a sentinel to keep filtering active
+    if (arr.length === 0) arr.push('__none__')
+  }
+  await writeEnvFilters(target.section, arr)
 }
 
+// Enable/disable entire section via filters
 async function setSectionEnabled(section: Section, enable: boolean): Promise<void> {
-  const { doc, entries } = await readPluginsOrShowError()
-  if (doc == null || entries.length === 0) return
-  const sectionEntries = entries.filter(e => e.section === section)
-  for (const e of sectionEntries) {
-    if (e.enabled !== enable) {
-      await setPluginEnabled(e, enable)
-    }
+  if (enable) {
+    await writeEnvFilters(section, [])
+  } else {
+    // Non-empty array with sentinel disables all effectively
+    await writeEnvFilters(section, ['__none__'])
   }
-  await fixCommasForSection(section)
+}
+
+// Apply filters to entries to derive enabled status
+function applyFiltersToEntries(entries: PluginLine[], filters: { currency: string[]; swap: string[] }): PluginLine[] {
+  const cur = filters.currency
+  const sw = filters.swap
+  const curNoFilter = cur.length === 0
+  const swNoFilter = sw.length === 0
+  return entries.map(e => ({
+    ...e,
+    enabled: e.section === 'currency' ? (curNoFilter ? true : cur.includes(e.key)) : (swNoFilter ? true : sw.includes(e.key))
+  }))
 }
 
 // Batch version: apply all comment toggles and comma fixes in ONE edit + ONE save
@@ -536,10 +542,11 @@ function extractPluginLines(text: string): PluginLine[] {
     let offset = start
     for (const line of snippet.split('\n')) {
       const m = line.match(/^(\s*)(\/\/\s*)?(["']?[\w.-]+["']?)\s*:/)
-      if (m != null) {
+      // Only include uncommented lines as toggleable entries
+      if (m != null && m[2] == null) {
         const rawKey = m[3]
         const key = rawKey.replace(/^[\'\"]|[\'\"]$/g, '')
-        const enabled = m[2] == null
+        const enabled = true
         out.push({
           key,
           enabled,
@@ -652,4 +659,41 @@ async function toggleEnvBoolean(key: string): Promise<void> {
   await vscode.workspace.applyEdit(edit)
   await doc.save()
   logDebug(`Toggled env key '${key}' in ${envUri.fsPath}`)
+}
+
+// Read/write FILTER_* arrays from env.json
+async function readEnvFilters(): Promise<{ currency: string[]; swap: string[] }> {
+  const doc = await findDocInEdgeGui('env.json')
+  if (doc == null) return { currency: [], swap: [] }
+  let json: EnvJson
+  try {
+    json = JSON.parse(doc.getText()) as EnvJson
+  } catch {
+    return { currency: [], swap: [] }
+  }
+  const toArray = (v: unknown): string[] => (Array.isArray(v) ? v.filter(x => typeof x === 'string') as string[] : [])
+  const currency = toArray((json as any).FILTER_CURRENCY_PLUGINS)
+  const swap = toArray((json as any).FILTER_SWAP_PLUGINS)
+  return { currency, swap }
+}
+
+async function writeEnvFilters(section: Section, allowList: string[]): Promise<void> {
+  const doc = await findDocInEdgeGui('env.json')
+  if (doc == null) return
+  let json: EnvJson
+  try {
+    json = JSON.parse(doc.getText()) as EnvJson
+  } catch {
+    json = {}
+  }
+  const key = section === 'currency' ? 'FILTER_CURRENCY_PLUGINS' : 'FILTER_SWAP_PLUGINS'
+  const unique = Array.from(new Set(allowList.filter(s => typeof s === 'string')))
+  ;(json as any)[key] = unique
+  const newText = JSON.stringify(json, null, 2) + '\n'
+  const envUri = doc.uri
+  const edit = new vscode.WorkspaceEdit()
+  edit.replace(envUri, new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), newText)
+  await vscode.workspace.applyEdit(edit)
+  await doc.save()
+  logDebug(`Updated ${key} in ${envUri.fsPath}: ${JSON.stringify(unique)}`)
 }
