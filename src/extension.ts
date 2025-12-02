@@ -550,6 +550,13 @@ function setCommentState(line: string, enable: boolean): string {
   return hasComment ? line : `${indent}// ${rest}`
 }
 
+/**
+ * Regex pattern to match plugin entry lines (both commented and uncommented).
+ * Pattern: optional comment prefix, key, colon, value (true/false/ENV.XXX/etc)
+ * This distinguishes real plugin entries from section header comments like `// edge-currency-bitcoin:`
+ */
+const PLUGIN_LINE_PATTERN = /^(\s*)(\/\/\s*)?(["']?[\w.-]+["']?)\s*:\s*(true|false|ENV\.\w+)/
+
 function extractPluginLines(text: string): PluginLine[] {
   const out: PluginLine[] = []
   const sections: Array<{ name: string; section: Section }> = [
@@ -563,11 +570,13 @@ function extractPluginLines(text: string): PluginLine[] {
     const snippet = text.slice(start, end)
     let offset = start
     for (const line of snippet.split('\n')) {
-      const m = line.match(/^(\s*)(\/\/\s*)?(["']?[\w.-]+["']?)\s*:/)
-      // Only include uncommented lines as toggleable entries
-      if (m != null && m[2] == null) {
+      const m = line.match(PLUGIN_LINE_PATTERN)
+      // Include both commented and uncommented lines that look like plugin entries
+      // (have a value like true/false/ENV.XXX). This excludes section comments like `// edge-currency-bitcoin:`
+      if (m != null) {
         const rawKey = m[3]
         const key = rawKey.replace(/^[\'\"]|[\'\"]$/g, '')
+        // Initial enabled state is true; will be overridden by env filters
         const enabled = true
         out.push({
           key,
