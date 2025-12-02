@@ -155,7 +155,8 @@
   "scripts": {
     "vscode:prepublish": "yarn compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -w -p ./"
+    "watch": "tsc -w -p ./",
+    "release": "./scripts/release.sh"
   },
   "devDependencies": {
     "@types/vscode": "^1.95.0",

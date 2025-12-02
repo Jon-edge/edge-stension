@@ -48,15 +48,17 @@ No configuration needed. The extension looks for `src/util/corePlugins.ts` and `
 ### Scripts
 - `yarn compile` — build TypeScript into `out/`
 - `yarn watch` — watch and rebuild during development
+- `yarn release` — interactive script to bump version, commit, tag, and push
 
 ### Releases
 Download the latest `.vsix` from the GitHub Releases page and install it in VS Code.
 
 #### How to create a new release
-1. Update version in `package.json` (e.g., `0.0.3`).
-2. Commit and push to `main`.
-3. Create a tag and push (this triggers the workflow):
-   - `git tag v0.0.3 && git push origin v0.0.3`
-4. Wait for GitHub Actions to finish. The Release is created automatically with the `.vsix` attached.
-5. Share the release link: https://github.com/Jon-edge/edge-stension/releases
+Run `yarn release` and follow the prompts. This will:
+1. Update version in `package.json`
+2. Commit and push to `main`
+3. Create and push the version tag (triggers the GitHub Actions workflow)
+4. GitHub Actions builds and attaches the `.vsix` to the release
+
+Release link: https://github.com/Jon-edge/edge-stension/releases
 
