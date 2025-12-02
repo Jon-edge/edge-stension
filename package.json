@@ -2,7 +2,7 @@
   "name": "edge-stension",
   "displayName": "Edge Tools",
   "publisher": "jon-edge",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "engines": {
     "vscode": "^1.95.0"
   },
